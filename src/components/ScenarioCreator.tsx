@@ -20,6 +20,7 @@ import { useSettingsStore } from "../store/settingsStore";
 import { useGameStore } from "../store/gameStore";
 import { NeuInput, NeuTextarea, NeuButton, NeuCard } from "./neumorphic/Primitives";
 import { generateRandomScenario } from "../engine/scenarioGenerator";
+import { TEMPLATE_PRESETS } from "../data/presets";
 import { Loader2 } from "lucide-react";
 
 function generateId(): string {
@@ -105,6 +106,26 @@ export default function ScenarioCreator() {
 
     if (id === "empty") {
       setGenre("Custom");
+      setStep("editor");
+      return;
+    }
+
+    // Load preset data for this template
+    const preset = TEMPLATE_PRESETS[id];
+    if (preset) {
+      setName(preset.name);
+      setDescription(preset.description);
+      setGenre(preset.genre);
+      setSetting(preset.setting);
+      setTags(preset.tags.join(", "));
+      setPlot(preset.plot);
+      setCards(
+        preset.storyCards.map((c) => ({
+          ...c,
+          id: generateId(),
+          enabled: true,
+        })),
+      );
     } else {
       setGenre(id.charAt(0).toUpperCase() + id.slice(1));
     }

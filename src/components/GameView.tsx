@@ -12,12 +12,13 @@ import {
   generateCompletion,
   generateCompletionStream,
 } from "../engine/llmClient";
+import { detectAndGenerateCards } from "../engine/cardGenerator";
 import StoryFeed from "./StoryFeed";
 import InputBar from "./InputBar";
 import SettingsSidebar from "./adventure/SettingsSidebar";
 
 export default function GameView() {
-  const { getActiveAdventure, addMessage, undoLastExchange } =
+  const { getActiveAdventure, addMessage, undoLastExchange, addStoryCard } =
     useAdventureStore();
   const { settings } = useSettingsStore();
   const {
@@ -41,6 +42,21 @@ export default function GameView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adventure?.id]);
 
+  const autoGenerateCards = useCallback(
+    async (responseText: string) => {
+      if (!adventure) return;
+      const newCards = await detectAndGenerateCards(
+        responseText,
+        adventure.storyCards,
+        settings.llm,
+      );
+      for (const card of newCards) {
+        addStoryCard(adventure.id, card);
+      }
+    },
+    [adventure, settings.llm, addStoryCard],
+  );
+
   const generateOpening = useCallback(async () => {
     if (!adventure) return;
     setGenerating(true);
@@ -49,24 +65,25 @@ export default function GameView() {
 
     try {
       const messages = buildInitialMessages(adventure);
+      let fullText = "";
       if (settings.streamResponses) {
-        let fullText = "";
         for await (const chunk of generateCompletionStream(messages, settings.llm)) {
           fullText += chunk;
           appendStreamingText(chunk);
         }
-        addMessage(adventure.id, createChatMessage("assistant", fullText));
       } else {
-        const response = await generateCompletion(messages, settings.llm);
-        addMessage(adventure.id, createChatMessage("assistant", response));
+        fullText = await generateCompletion(messages, settings.llm);
       }
+      addMessage(adventure.id, createChatMessage("assistant", fullText));
+      // Auto-detect and generate story cards from the opening
+      autoGenerateCards(fullText);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to connect to LLM");
     } finally {
       setGenerating(false);
       setStreamingText("");
     }
-  }, [adventure, settings, addMessage, setGenerating, setStreamingText, appendStreamingText, setError]);
+  }, [adventure, settings, addMessage, setGenerating, setStreamingText, appendStreamingText, setError, autoGenerateCards]);
 
   const handleSubmit = useCallback(
     async (text: string, mode: InputMode) => {
@@ -78,17 +95,18 @@ export default function GameView() {
 
       try {
         const messages = buildMessages(adventure, text, mode, settings);
+        let fullText = "";
         if (settings.streamResponses) {
-          let fullText = "";
           for await (const chunk of generateCompletionStream(messages, settings.llm)) {
             fullText += chunk;
             appendStreamingText(chunk);
           }
-          addMessage(adventure.id, createChatMessage("assistant", fullText));
         } else {
-          const response = await generateCompletion(messages, settings.llm);
-          addMessage(adventure.id, createChatMessage("assistant", response));
+          fullText = await generateCompletion(messages, settings.llm);
         }
+        addMessage(adventure.id, createChatMessage("assistant", fullText));
+        // Auto-detect and generate story cards from the response
+        autoGenerateCards(fullText);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to connect to LLM");
       } finally {
@@ -96,7 +114,7 @@ export default function GameView() {
         setStreamingText("");
       }
     },
-    [adventure, isGenerating, settings, addMessage, setGenerating, setStreamingText, appendStreamingText, setError],
+    [adventure, isGenerating, settings, addMessage, setGenerating, setStreamingText, appendStreamingText, setError, autoGenerateCards],
   );
 
   function handleUndo() {
