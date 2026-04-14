@@ -386,7 +386,7 @@ export default function ScenarioCreator() {
                                 onChange={(e) =>
                                   updateCard(card.id, { type: e.target.value as StoryCard["type"] })
                                 }
-                                className="text-xs rounded-lg px-2 py-1 bg-[#1a1a1a] text-[var(--text-secondary)] border border-white/5 outline-none cursor-pointer"
+                                className="text-xs rounded-lg px-2 py-1 bg-[var(--background)] text-[var(--text-secondary)] border border-[var(--border)] outline-none cursor-pointer"
                               >
                                 <option value="character">Character</option>
                                 <option value="location">Location</option>

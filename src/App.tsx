@@ -24,7 +24,7 @@ export default function App() {
   const isGameView = currentView === "game";
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#212121]">
+    <div className="flex h-screen w-screen overflow-hidden bg-[var(--background)]">
       <BackgroundGradient />
 
       {/* Sidebar — hidden during game view for immersion */}

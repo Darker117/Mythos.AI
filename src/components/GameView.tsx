@@ -116,7 +116,7 @@ export default function GameView() {
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-[#1a1a1a]/60 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-[var(--glass-bg)] backdrop-blur-[var(--glass-blur)] shrink-0">
           <button onClick={() => setView("dashboard")} className="p-2 rounded-lg hover:bg-white/5 text-[var(--text-muted)] cursor-pointer transition-colors">
             <ArrowLeft size={18} />
           </button>

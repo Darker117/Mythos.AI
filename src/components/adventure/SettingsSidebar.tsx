@@ -93,7 +93,7 @@ export default function SettingsSidebar({ adventure }: Props) {
   const plot = adventure.plot ?? { aiInstructions: "", plotEssentials: "", authorsNote: "", storySummary: "", openingType: "story" as const, openingContent: "" };
 
   return (
-    <div className="w-80 h-full border-l border-white/5 flex flex-col shrink-0 bg-[#1a1a1a]/90 backdrop-blur-md">
+    <div className="w-80 h-full border-l border-white/5 flex flex-col shrink-0 bg-[var(--glass-bg-strong)] backdrop-blur-[var(--glass-blur)]">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
         <div className="flex gap-1">
@@ -247,7 +247,7 @@ export default function SettingsSidebar({ adventure }: Props) {
                 <select
                   value={settings.llm.model}
                   onChange={(e) => updateLLM({ model: e.target.value })}
-                  className="w-full rounded-xl px-3 py-2 text-sm bg-[#1a1a1a] text-[var(--text-primary)] border border-white/5 outline-none cursor-pointer shadow-[inset_3px_3px_6px_#111,inset_-3px_-3px_6px_#2a2a2a]"
+                  className="w-full rounded-xl px-3 py-2 text-sm bg-[var(--background)] text-[var(--text-primary)] border border-[var(--border)] outline-none cursor-pointer shadow-[inset_2px_2px_6px_rgba(0,0,0,0.35),inset_-2px_-2px_6px_rgba(255,255,255,0.025)]"
                 >
                   <option value="default">Default</option>
                   {models.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -297,7 +297,7 @@ export default function SettingsSidebar({ adventure }: Props) {
                     key={t.key}
                     onClick={() => setTheme(t.key)}
                     className={`flex items-center gap-2 p-2.5 rounded-xl text-xs font-medium cursor-pointer transition-all ${
-                      settings.theme === t.key ? "bg-white/10 border border-white/10" : "bg-[#1a1a1a] border border-white/5 hover:bg-white/5"
+                      settings.theme === t.key ? "bg-white/10 border border-white/10" : "bg-[var(--surface)] border border-[var(--border)] hover:bg-white/5"
                     }`}
                     style={{ color: settings.theme === t.key ? t.color : "var(--text-secondary)" }}
                   >
@@ -359,7 +359,7 @@ function CardItem({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-xl p-3 bg-[#252525] border border-white/5" style={{ opacity: card.enabled ? 1 : 0.5 }}>
+    <div className="rounded-xl p-3 bg-[var(--surface)] border border-[var(--border)]" style={{ opacity: card.enabled ? 1 : 0.5 }}>
       <div className="flex items-center gap-2">
         <button onClick={() => setOpen(!open)} className="cursor-pointer text-[var(--text-muted)]">
           {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}

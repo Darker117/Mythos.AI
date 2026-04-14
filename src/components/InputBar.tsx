@@ -52,7 +52,7 @@ export default function InputBar({ onSubmit, onUndo, disabled, canUndo }: InputB
   const modes: InputMode[] = ["do", "say", "story", "see"];
 
   return (
-    <div className="border-t border-white/5 px-4 py-3 bg-[#1a1a1a]/80 backdrop-blur-md">
+    <div className="border-t border-white/5 px-4 py-3 bg-[var(--glass-bg-strong)] backdrop-blur-[var(--glass-blur)]">
       <div className="max-w-3xl mx-auto">
         {/* Mode selector */}
         <div className="flex items-center gap-1 mb-2">
@@ -86,7 +86,7 @@ export default function InputBar({ onSubmit, onUndo, disabled, canUndo }: InputB
         </div>
 
         {/* Input */}
-        <div className="flex items-end gap-2 rounded-2xl p-2 bg-[#1a1a1a] border border-white/5 shadow-[inset_3px_3px_6px_#111,inset_-3px_-3px_6px_#2a2a2a]">
+        <div className="flex items-end gap-2 rounded-2xl p-2 bg-[var(--background)] border border-[var(--border)] shadow-[inset_2px_2px_6px_rgba(0,0,0,0.35),inset_-2px_-2px_6px_rgba(255,255,255,0.025)]">
           <textarea
             ref={textareaRef}
             value={text}

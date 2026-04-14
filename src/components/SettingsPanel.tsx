@@ -96,7 +96,7 @@ export default function SettingsPanel() {
                 </div>
                 {models.length > 0 ? (
                   <select value={settings.llm.model} onChange={(e) => updateLLM({ model: e.target.value })}
-                    className="w-full rounded-xl px-3 py-2.5 text-sm bg-[#1a1a1a] text-[var(--text-primary)] border border-white/5 outline-none cursor-pointer shadow-[inset_3px_3px_6px_#111,inset_-3px_-3px_6px_#2a2a2a]">
+                    className="w-full rounded-xl px-3 py-2.5 text-sm bg-[var(--background)] text-[var(--text-primary)] border border-[var(--border)] outline-none cursor-pointer shadow-[inset_2px_2px_6px_rgba(0,0,0,0.35),inset_-2px_-2px_6px_rgba(255,255,255,0.025)]">
                     <option value="default">Default</option>
                     {models.map((m) => <option key={m} value={m}>{m}</option>)}
                   </select>
@@ -169,7 +169,7 @@ export default function SettingsPanel() {
                 {THEMES.map((t) => (
                   <button key={t.key} onClick={() => setTheme(t.key)}
                     className={`flex items-center gap-3 p-3.5 rounded-xl transition-all cursor-pointer ${
-                      settings.theme === t.key ? "bg-white/10 border-2 border-white/10" : "bg-[#1a1a1a] border-2 border-transparent hover:bg-white/5"
+                      settings.theme === t.key ? "bg-white/10 border-2 border-white/10" : "bg-[var(--surface)] border-2 border-transparent hover:bg-white/5"
                     }`}>
                     <div className="w-5 h-5 rounded-full shrink-0" style={{ backgroundColor: t.color, boxShadow: `0 0 12px ${t.color}50` }} />
                     <span className="text-sm font-medium" style={{ color: settings.theme === t.key ? t.color : "var(--text-secondary)" }}>

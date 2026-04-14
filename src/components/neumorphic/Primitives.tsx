@@ -14,11 +14,15 @@ export function NeuCard({ children, className = "", inset, glass, clickable, onC
   const base = glass
     ? "neu-glass rounded-2xl"
     : inset
-      ? "bg-[#212121] rounded-2xl neu-inset"
-      : "bg-[#212121] rounded-2xl neu-flat";
-  const hover = clickable ? "hover:-translate-y-0.5 hover:shadow-lg cursor-pointer transition-transform" : "";
+      ? "bg-[var(--surface)] rounded-2xl neu-inset"
+      : "bg-[var(--surface)] rounded-2xl neu-flat";
+
+  const interactive = clickable
+    ? "hover:-translate-y-0.5 active:translate-y-0 cursor-pointer transition-all duration-300 ease-out hover:shadow-[6px_6px_20px_rgba(0,0,0,0.5),-4px_-4px_16px_rgba(255,255,255,0.05)] active:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.4),inset_-2px_-2px_6px_rgba(255,255,255,0.03)]"
+    : "";
+
   return (
-    <div className={`${base} ${hover} ${className}`} onClick={onClick}>
+    <div className={`${base} ${interactive} ${className}`} onClick={onClick}>
       {children}
     </div>
   );
@@ -42,11 +46,20 @@ export function NeuButton({ active, size = "md", children, className = "", ...re
   return (
     <button
       className={`
-        rounded-xl font-medium transition-all cursor-pointer
+        rounded-xl font-medium cursor-pointer select-none
+        transition-all duration-200 ease-out
         ${sizeMap[size]}
         ${active
-          ? "bg-white/10 border border-white/10 text-[var(--accent)]"
-          : "bg-[#212121] border border-white/5 text-[var(--text-secondary)] hover:bg-white/5 hover:text-[var(--text-primary)]"}
+          ? `bg-[var(--accent-muted)] text-[var(--accent)]
+             border border-[rgba(var(--accent-rgb),0.2)]
+             shadow-[0_0_12px_var(--accent-glow-color),inset_0_1px_0_rgba(255,255,255,0.05)]`
+          : `bg-[var(--surface)] text-[var(--text-secondary)]
+             border border-[var(--border)]
+             shadow-[3px_3px_8px_rgba(0,0,0,0.4),-2px_-2px_6px_rgba(255,255,255,0.03),inset_0_1px_0_rgba(255,255,255,0.04)]
+             hover:bg-[var(--surface-raised)] hover:text-[var(--text-primary)] hover:border-[var(--border-glow)]
+             hover:shadow-[4px_4px_12px_rgba(0,0,0,0.45),-3px_-3px_8px_rgba(255,255,255,0.04),inset_0_1px_0_rgba(255,255,255,0.05)]
+             active:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.4),inset_-1px_-1px_3px_rgba(255,255,255,0.03)]
+             active:translate-y-[0.5px]`}
         ${className}
       `}
       {...rest}
@@ -65,18 +78,19 @@ export function NeuInput({ label, className = "", ...rest }: InputProps) {
   return (
     <div>
       {label && (
-        <label className="block text-xs font-medium mb-1.5 text-[var(--text-muted)]">
+        <label className="block text-xs font-medium mb-1.5 text-[var(--text-muted)] tracking-wide uppercase">
           {label}
         </label>
       )}
       <input
         className={`
           w-full rounded-xl px-4 py-2.5 text-sm outline-none
-          bg-[#1a1a1a] text-[var(--text-primary)]
-          border border-white/5
-          shadow-[inset_3px_3px_6px_#111111,inset_-3px_-3px_6px_#2a2a2a]
-          focus:border-[var(--accent)] focus:shadow-[inset_3px_3px_6px_#111111,inset_-3px_-3px_6px_#2a2a2a,0_0_0_1px_var(--accent)]
-          transition-all placeholder:text-[var(--text-muted)]
+          bg-[var(--background)] text-[var(--text-primary)]
+          border border-[var(--border)]
+          shadow-[inset_2px_2px_6px_rgba(0,0,0,0.35),inset_-2px_-2px_6px_rgba(255,255,255,0.025)]
+          focus:border-[rgba(var(--accent-rgb),0.4)]
+          focus:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.35),inset_-2px_-2px_6px_rgba(255,255,255,0.025),0_0_0_1px_rgba(var(--accent-rgb),0.15),0_0_12px_rgba(var(--accent-rgb),0.08)]
+          transition-all duration-300 placeholder:text-[var(--text-muted)]
           ${className}
         `}
         {...rest}
@@ -94,18 +108,19 @@ export function NeuTextarea({ label, className = "", ...rest }: TextareaProps) {
   return (
     <div>
       {label && (
-        <label className="block text-xs font-medium mb-1.5 text-[var(--text-muted)]">
+        <label className="block text-xs font-medium mb-1.5 text-[var(--text-muted)] tracking-wide uppercase">
           {label}
         </label>
       )}
       <textarea
         className={`
           w-full rounded-xl px-4 py-2.5 text-sm outline-none resize-none
-          bg-[#1a1a1a] text-[var(--text-primary)]
-          border border-white/5
-          shadow-[inset_3px_3px_6px_#111111,inset_-3px_-3px_6px_#2a2a2a]
-          focus:border-[var(--accent)] focus:shadow-[inset_3px_3px_6px_#111111,inset_-3px_-3px_6px_#2a2a2a,0_0_0_1px_var(--accent)]
-          transition-all placeholder:text-[var(--text-muted)]
+          bg-[var(--background)] text-[var(--text-primary)]
+          border border-[var(--border)]
+          shadow-[inset_2px_2px_6px_rgba(0,0,0,0.35),inset_-2px_-2px_6px_rgba(255,255,255,0.025)]
+          focus:border-[rgba(var(--accent-rgb),0.4)]
+          focus:shadow-[inset_2px_2px_6px_rgba(0,0,0,0.35),inset_-2px_-2px_6px_rgba(255,255,255,0.025),0_0_0_1px_rgba(var(--accent-rgb),0.15),0_0_12px_rgba(var(--accent-rgb),0.08)]
+          transition-all duration-300 placeholder:text-[var(--text-muted)]
           ${className}
         `}
         {...rest}
