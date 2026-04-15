@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Home,
   Sparkles,
@@ -121,8 +122,9 @@ export default function Sidebar() {
         </NeuButton>
       </div>
 
-      {/* No Adventure Popup */}
-      {showNoAdventurePopup && (
+      {/* No Adventure Popup — portaled to body so it centers relative to the viewport,
+          not the Sidebar (whose transform creates a new containing block for fixed children). */}
+      {showNoAdventurePopup && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -160,7 +162,8 @@ export default function Sidebar() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

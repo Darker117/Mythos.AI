@@ -8,6 +8,8 @@ import {
   Palette,
   ToggleLeft,
   ToggleRight,
+  Check,
+  Save,
 } from "lucide-react";
 import { useSettingsStore } from "../store/settingsStore";
 import { useGameStore } from "../store/gameStore";
@@ -39,6 +41,25 @@ export default function SettingsPanel() {
   const [connectionStatus, setConnectionStatus] = useState<"idle" | "testing" | "connected" | "failed">("idle");
   const [models, setModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
+  const [endpointDraft, setEndpointDraft] = useState(settings.llm.endpoint);
+  const [apiKeyDraft, setApiKeyDraft] = useState(settings.llm.apiKey);
+  const [endpointSaved, setEndpointSaved] = useState(false);
+  const [apiKeySaved, setApiKeySaved] = useState(false);
+
+  const endpointDirty = endpointDraft !== settings.llm.endpoint;
+  const apiKeyDirty = apiKeyDraft !== settings.llm.apiKey;
+
+  function handleSaveEndpoint() {
+    updateLLM({ endpoint: endpointDraft });
+    setEndpointSaved(true);
+    setTimeout(() => setEndpointSaved(false), 2000);
+  }
+
+  function handleSaveApiKey() {
+    updateLLM({ apiKey: apiKeyDraft });
+    setApiKeySaved(true);
+    setTimeout(() => setApiKeySaved(false), 2000);
+  }
 
   useEffect(() => {
     handleTest();
@@ -81,10 +102,55 @@ export default function SettingsPanel() {
           <div className="space-y-6">
             <NeuCard glass className="p-5 space-y-4">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Connection</h3>
-              <NeuInput label="Endpoint URL" value={settings.llm.endpoint}
-                onChange={(e) => updateLLM({ endpoint: e.target.value })} placeholder="http://localhost:1234/v1" />
-              <NeuInput label="API Key" type="password" value={settings.llm.apiKey}
-                onChange={(e) => updateLLM({ apiKey: e.target.value })} placeholder="lm-studio" />
+              <div>
+                <NeuInput label="Endpoint URL" value={endpointDraft}
+                  onChange={(e) => setEndpointDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && endpointDirty) handleSaveEndpoint(); }}
+                  placeholder="http://localhost:1234/v1" />
+                <div className="flex items-center gap-2 mt-2">
+                  <button onClick={handleSaveEndpoint} disabled={!endpointDirty}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      endpointDirty
+                        ? "bg-[var(--accent-muted)] text-[var(--accent)] cursor-pointer hover:brightness-110"
+                        : "bg-white/5 text-[var(--text-muted)] cursor-not-allowed opacity-60"
+                    }`}>
+                    <Save size={12} /> Save
+                  </button>
+                  {endpointSaved && (
+                    <span className="flex items-center gap-1 text-xs text-[var(--success)]">
+                      <Check size={12} /> Saved
+                    </span>
+                  )}
+                  {endpointDirty && !endpointSaved && (
+                    <span className="text-xs text-[var(--text-muted)]">Unsaved changes</span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <NeuInput label="API Key" type="password" value={apiKeyDraft}
+                  onChange={(e) => setApiKeyDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && apiKeyDirty) handleSaveApiKey(); }}
+                  placeholder="lm-studio" />
+                <div className="flex items-center gap-2 mt-2">
+                  <button onClick={handleSaveApiKey} disabled={!apiKeyDirty}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      apiKeyDirty
+                        ? "bg-[var(--accent-muted)] text-[var(--accent)] cursor-pointer hover:brightness-110"
+                        : "bg-white/5 text-[var(--text-muted)] cursor-not-allowed opacity-60"
+                    }`}>
+                    <Save size={12} /> Save
+                  </button>
+                  {apiKeySaved && (
+                    <span className="flex items-center gap-1 text-xs text-[var(--success)]">
+                      <Check size={12} /> Saved
+                    </span>
+                  )}
+                  {apiKeyDirty && !apiKeySaved && (
+                    <span className="text-xs text-[var(--text-muted)]">Unsaved changes</span>
+                  )}
+                </div>
+              </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
