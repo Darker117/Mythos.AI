@@ -63,16 +63,17 @@ export default function Sidebar() {
       `}
     >
       {/* Toggle */}
-      <button
+      <NeuButton
+        size="iconXs"
         onClick={toggleSidebarCollapsed}
-        className="absolute -right-3 top-8 w-6 h-6 rounded-full bg-[var(--surface-raised)] border border-[var(--border-glow)] flex items-center justify-center cursor-pointer hover:bg-[var(--surface-raised)] transition-colors z-40"
+        className="!absolute -right-3 top-8 !rounded-full z-40"
       >
         {sidebarCollapsed ? (
-          <ChevronRight size={12} className="text-white/60" />
+          <ChevronRight size={12} className="text-white/70" />
         ) : (
-          <ChevronLeft size={12} className="text-white/60" />
+          <ChevronLeft size={12} className="text-white/70" />
         )}
-      </button>
+      </NeuButton>
 
       {/* Brand */}
       <div className="px-5 pt-6 pb-4 flex items-center gap-3 overflow-hidden">

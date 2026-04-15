@@ -34,7 +34,7 @@ export default function App() {
 
   if (!ready) {
     return (
-      <div className="flex items-center justify-center h-screen w-screen bg-[var(--background)]">
+      <div className="flex items-center justify-center h-screen w-screen bg-transparent">
         <BackgroundGradient />
         <div className="text-sm text-[var(--text-muted)] animate-pulse">Loading…</div>
       </div>
@@ -42,7 +42,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[var(--background)]">
+    <div className="flex h-screen w-screen overflow-hidden bg-transparent">
       <BackgroundGradient />
 
       {/* Sidebar — hidden during game view for immersion */}

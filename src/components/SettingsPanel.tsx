@@ -18,7 +18,7 @@ import type { ThemeName, TextStyle } from "../types";
 import { NeuCard, NeuButton, NeuInput } from "./neumorphic/Primitives";
 
 const THEMES: { key: ThemeName; label: string; color: string }[] = [
-  { key: "dark", label: "Default", color: "#7c5cfc" },
+  { key: "dark", label: "Default", color: "#b46bff" },
   { key: "orcish", label: "Orcish", color: "#ef4444" },
   { key: "atlantis", label: "Atlantis", color: "#06b6d4" },
   { key: "smores", label: "S'mores", color: "#f59e0b" },
@@ -60,6 +60,16 @@ export default function SettingsPanel() {
     setApiKeySaved(true);
     setTimeout(() => setApiKeySaved(false), 2000);
   }
+
+  // Keep drafts in sync if the saved values change elsewhere (e.g. from the
+  // in-game settings sidebar). Without this, a save made over there would be
+  // invisible here until the user remounted the view.
+  useEffect(() => {
+    setEndpointDraft(settings.llm.endpoint);
+  }, [settings.llm.endpoint]);
+  useEffect(() => {
+    setApiKeyDraft(settings.llm.apiKey);
+  }, [settings.llm.apiKey]);
 
   useEffect(() => {
     handleTest();

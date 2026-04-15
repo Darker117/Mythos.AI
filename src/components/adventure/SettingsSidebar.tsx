@@ -14,6 +14,8 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronRight,
+  Check,
+  Save,
 } from "lucide-react";
 import type { Adventure, StoryCard, ThemeName, TextStyle } from "../../types";
 import { useAdventureStore } from "../../store/adventureStore";
@@ -31,7 +33,7 @@ interface Props {
 }
 
 const THEMES: { key: ThemeName; label: string; color: string }[] = [
-  { key: "dark", label: "Default", color: "#7c5cfc" },
+  { key: "dark", label: "Default", color: "#b46bff" },
   { key: "orcish", label: "Orcish", color: "#ef4444" },
   { key: "atlantis", label: "Atlantis", color: "#06b6d4" },
   { key: "smores", label: "S'mores", color: "#f59e0b" },
@@ -62,6 +64,21 @@ export default function SettingsSidebar({ adventure }: Props) {
 
   const [models, setModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
+  const [endpointDraft, setEndpointDraft] = useState(settings.llm.endpoint);
+  const [endpointSaved, setEndpointSaved] = useState(false);
+
+  // Keep the draft in sync if the saved endpoint changes elsewhere (e.g. from the main Settings page).
+  useEffect(() => {
+    setEndpointDraft(settings.llm.endpoint);
+  }, [settings.llm.endpoint]);
+
+  const endpointDirty = endpointDraft !== settings.llm.endpoint;
+
+  function handleSaveEndpoint() {
+    updateLLM({ endpoint: endpointDraft });
+    setEndpointSaved(true);
+    setTimeout(() => setEndpointSaved(false), 2000);
+  }
 
   useEffect(() => {
     if (settingsPanelOpen && gameplaySubTab === "models") {
@@ -114,12 +131,12 @@ export default function SettingsSidebar({ adventure }: Props) {
             <Gamepad2 size={13} /> Gameplay
           </button>
         </div>
-        <button
+        <NeuButton
+          size="iconSm"
           onClick={() => setSettingsPanelOpen(false)}
-          className="p-1.5 rounded-lg hover:bg-white/5 text-[var(--text-muted)] cursor-pointer"
         >
           <X size={15} />
-        </button>
+        </NeuButton>
       </div>
 
       {/* Sub-tabs */}
@@ -227,12 +244,36 @@ export default function SettingsSidebar({ adventure }: Props) {
         {/* ── GAMEPLAY > MODELS ── */}
         {adventureTab === "gameplay" && gameplaySubTab === "models" && (
           <>
-            <NeuInput
-              label="Endpoint"
-              value={settings.llm.endpoint}
-              onChange={(e) => updateLLM({ endpoint: e.target.value })}
-              placeholder="http://localhost:1234/v1"
-            />
+            <div>
+              <NeuInput
+                label="Endpoint"
+                value={endpointDraft}
+                onChange={(e) => setEndpointDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && endpointDirty) handleSaveEndpoint(); }}
+                placeholder="http://localhost:1234/v1"
+              />
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  onClick={handleSaveEndpoint}
+                  disabled={!endpointDirty}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    endpointDirty
+                      ? "bg-[var(--accent-muted)] text-[var(--accent)] cursor-pointer hover:brightness-110"
+                      : "bg-white/5 text-[var(--text-muted)] cursor-not-allowed opacity-60"
+                  }`}
+                >
+                  <Save size={12} /> Save
+                </button>
+                {endpointSaved && (
+                  <span className="flex items-center gap-1 text-xs text-[var(--success)]">
+                    <Check size={12} /> Saved
+                  </span>
+                )}
+                {endpointDirty && !endpointSaved && (
+                  <span className="text-xs text-[var(--text-muted)]">Unsaved</span>
+                )}
+              </div>
+            </div>
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-medium text-[var(--text-muted)]">Model</label>

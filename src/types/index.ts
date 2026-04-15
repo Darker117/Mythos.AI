@@ -88,7 +88,7 @@ export const GENRES = [
 export type Genre = (typeof GENRES)[number];
 
 export const SCENARIO_TEMPLATES = [
-  { id: "random", label: "Random", icon: "Shuffle", color: "#7c5cfc" },
+  { id: "random", label: "Random", icon: "Shuffle", color: "#b46bff" },
   { id: "empty", label: "Blank", icon: "FileText", color: "#666" },
   { id: "fantasy", label: "Fantasy", icon: "Sword", color: "#ef4444" },
   { id: "mystery", label: "Mystery", icon: "Search", color: "#f59e0b" },

@@ -31,7 +31,7 @@ export function NeuCard({ children, className = "", inset, glass, clickable, onC
 // ── NeumorphicButton ──
 interface BtnProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   active?: boolean;
-  size?: "sm" | "md" | "lg" | "icon";
+  size?: "sm" | "md" | "lg" | "icon" | "iconSm" | "iconXs";
   children: ReactNode;
 }
 
@@ -40,6 +40,8 @@ const sizeMap = {
   md: "px-5 py-2.5 text-sm",
   lg: "px-8 py-3.5 text-base",
   icon: "w-10 h-10 flex items-center justify-center",
+  iconSm: "w-8 h-8 flex items-center justify-center",
+  iconXs: "w-6 h-6 flex items-center justify-center",
 };
 
 export function NeuButton({ active, size = "md", children, className = "", ...rest }: BtnProps) {

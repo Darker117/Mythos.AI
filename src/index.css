@@ -8,10 +8,11 @@
 
 /* ── Neumorphic + Glassmorphic Base ── */
 :root {
-  --background: #1e1e1e;
-  --surface: #242424;
-  --surface-raised: #2a2a2a;
-  --foreground: #e0e0e0;
+  /* Synthwave base — deep night-blue, slightly cool */
+  --background: #0c0a1f;
+  --surface: rgba(20, 16, 38, 0.55);
+  --surface-raised: rgba(28, 22, 50, 0.65);
+  --foreground: #ffffff;
 
   /* Neumorphic shadow palette — softer, layered */
   --neu-shadow-dark: rgba(0, 0, 0, 0.5);
@@ -19,16 +20,16 @@
   --neu-shadow-dark-strong: rgba(0, 0, 0, 0.7);
   --neu-shadow-light-strong: rgba(255, 255, 255, 0.06);
 
-  /* Accent colors — overridden per theme */
-  --accent: #7c5cfc;
-  --accent-hover: #9b7dff;
-  --accent-rgb: 124, 92, 252;
-  --accent-muted: rgba(124, 92, 252, 0.12);
-  --accent-glow-color: rgba(124, 92, 252, 0.25);
+  /* Accent colors — overridden per theme. Default = synthwave magenta-purple. */
+  --accent: #b46bff;
+  --accent-hover: #d09cff;
+  --accent-rgb: 180, 107, 255;
+  --accent-muted: rgba(180, 107, 255, 0.14);
+  --accent-glow-color: rgba(180, 107, 255, 0.32);
 
-  --text-primary: #e8e8e8;
-  --text-secondary: #a8a8a8;
-  --text-muted: #636363;
+  --text-primary: #ffffff;
+  --text-secondary: #d4d4d4;
+  --text-muted: #8a8a8a;
 
   --border: rgba(255, 255, 255, 0.06);
   --border-strong: rgba(255, 255, 255, 0.12);
@@ -38,9 +39,9 @@
   --success: #34d399;
   --warning: #fbbf24;
 
-  /* Glass system */
-  --glass-bg: rgba(30, 30, 30, 0.65);
-  --glass-bg-strong: rgba(30, 30, 30, 0.85);
+  /* Glass system — tinted with synthwave night-blue, low alpha so shader shows through */
+  --glass-bg: rgba(18, 14, 36, 0.55);
+  --glass-bg-strong: rgba(18, 14, 36, 0.78);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-border-top: rgba(255, 255, 255, 0.12);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -51,11 +52,11 @@
 
 /* ── Theme Accent Overrides ── */
 [data-theme="dark"] {
-  --accent: #7c5cfc;
-  --accent-hover: #9b7dff;
-  --accent-rgb: 124, 92, 252;
-  --accent-muted: rgba(124, 92, 252, 0.12);
-  --accent-glow-color: rgba(124, 92, 252, 0.25);
+  --accent: #b46bff;
+  --accent-hover: #d09cff;
+  --accent-rgb: 180, 107, 255;
+  --accent-muted: rgba(180, 107, 255, 0.14);
+  --accent-glow-color: rgba(180, 107, 255, 0.32);
 }
 
 [data-theme="orcish"] {
@@ -104,6 +105,7 @@ html {
 body {
   margin: 0;
   padding: 0;
+  /* Solid fallback in case WebGL fails; the shader background paints on top via z-index. */
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);

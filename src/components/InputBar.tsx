@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Sword, MessageCircle, Pen, Eye, Undo2 } from "lucide-react";
 import { useGameStore, type InputMode } from "../store/gameStore";
+import { NeuButton } from "./neumorphic/Primitives";
 
 interface InputBarProps {
   onSubmit: (text: string, mode: InputMode) => void;
@@ -61,27 +62,28 @@ export default function InputBar({ onSubmit, onUndo, disabled, canUndo }: InputB
             const Icon = cfg.icon;
             const active = mode === inputMode;
             return (
-              <button
+              <NeuButton
                 key={mode}
+                size="sm"
+                active={active}
                 onClick={() => setInputMode(mode)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                  active ? "bg-white/10 text-[var(--accent)]" : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
-                }`}
+                className="flex items-center gap-1.5"
               >
                 <Icon size={13} />
                 {cfg.label}
-              </button>
+              </NeuButton>
             );
           })}
           <div className="flex-1" />
           {canUndo && (
-            <button
+            <NeuButton
+              size="sm"
               onClick={onUndo}
               disabled={disabled}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer transition-colors"
+              className="flex items-center gap-1"
             >
               <Undo2 size={13} /> Undo
-            </button>
+            </NeuButton>
           )}
         </div>
 
@@ -99,17 +101,15 @@ export default function InputBar({ onSubmit, onUndo, disabled, canUndo }: InputB
             className="flex-1 bg-transparent resize-none outline-none text-sm py-2 px-2 text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
             style={{ maxHeight: "150px" }}
           />
-          <button
+          <NeuButton
+            size="icon"
+            active={Boolean(text.trim() && !disabled)}
             onClick={handleSubmit}
             disabled={disabled || !text.trim()}
-            className="p-2.5 rounded-xl transition-all cursor-pointer shrink-0"
-            style={{
-              backgroundColor: text.trim() && !disabled ? "var(--accent)" : "#2a2a2a",
-              color: text.trim() && !disabled ? "#fff" : "var(--text-muted)",
-            }}
+            className="shrink-0"
           >
             <Send size={16} />
-          </button>
+          </NeuButton>
         </div>
       </div>
     </div>
