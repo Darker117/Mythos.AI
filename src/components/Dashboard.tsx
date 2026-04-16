@@ -72,7 +72,7 @@ export default function Dashboard() {
             </div>
             <button
               onClick={() => openCreator()}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all cursor-pointer hover:brightness-110 accent-glow"
+              className="hidden md:flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all cursor-pointer hover:brightness-110 accent-glow"
               style={{ backgroundColor: "var(--accent)" }}
             >
               <Plus size={18} />

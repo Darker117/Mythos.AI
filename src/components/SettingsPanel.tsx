@@ -8,6 +8,8 @@ import {
   Palette,
   ToggleLeft,
   ToggleRight,
+  Check,
+  Save,
 } from "lucide-react";
 import { useSettingsStore } from "../store/settingsStore";
 import { useGameStore } from "../store/gameStore";
@@ -16,7 +18,7 @@ import type { ThemeName, TextStyle } from "../types";
 import { NeuCard, NeuButton, NeuInput } from "./neumorphic/Primitives";
 
 const THEMES: { key: ThemeName; label: string; color: string }[] = [
-  { key: "dark", label: "Default", color: "#7c5cfc" },
+  { key: "dark", label: "Default", color: "#b46bff" },
   { key: "orcish", label: "Orcish", color: "#ef4444" },
   { key: "atlantis", label: "Atlantis", color: "#06b6d4" },
   { key: "smores", label: "S'mores", color: "#f59e0b" },
@@ -39,6 +41,35 @@ export default function SettingsPanel() {
   const [connectionStatus, setConnectionStatus] = useState<"idle" | "testing" | "connected" | "failed">("idle");
   const [models, setModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
+  const [endpointDraft, setEndpointDraft] = useState(settings.llm.endpoint);
+  const [apiKeyDraft, setApiKeyDraft] = useState(settings.llm.apiKey);
+  const [endpointSaved, setEndpointSaved] = useState(false);
+  const [apiKeySaved, setApiKeySaved] = useState(false);
+
+  const endpointDirty = endpointDraft !== settings.llm.endpoint;
+  const apiKeyDirty = apiKeyDraft !== settings.llm.apiKey;
+
+  function handleSaveEndpoint() {
+    updateLLM({ endpoint: endpointDraft });
+    setEndpointSaved(true);
+    setTimeout(() => setEndpointSaved(false), 2000);
+  }
+
+  function handleSaveApiKey() {
+    updateLLM({ apiKey: apiKeyDraft });
+    setApiKeySaved(true);
+    setTimeout(() => setApiKeySaved(false), 2000);
+  }
+
+  // Keep drafts in sync if the saved values change elsewhere (e.g. from the
+  // in-game settings sidebar). Without this, a save made over there would be
+  // invisible here until the user remounted the view.
+  useEffect(() => {
+    setEndpointDraft(settings.llm.endpoint);
+  }, [settings.llm.endpoint]);
+  useEffect(() => {
+    setApiKeyDraft(settings.llm.apiKey);
+  }, [settings.llm.apiKey]);
 
   useEffect(() => {
     handleTest();
@@ -81,10 +112,55 @@ export default function SettingsPanel() {
           <div className="space-y-6">
             <NeuCard glass className="p-5 space-y-4">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Connection</h3>
-              <NeuInput label="Endpoint URL" value={settings.llm.endpoint}
-                onChange={(e) => updateLLM({ endpoint: e.target.value })} placeholder="http://localhost:1234/v1" />
-              <NeuInput label="API Key" type="password" value={settings.llm.apiKey}
-                onChange={(e) => updateLLM({ apiKey: e.target.value })} placeholder="lm-studio" />
+              <div>
+                <NeuInput label="Endpoint URL" value={endpointDraft}
+                  onChange={(e) => setEndpointDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && endpointDirty) handleSaveEndpoint(); }}
+                  placeholder="http://localhost:1234/v1" />
+                <div className="flex items-center gap-2 mt-2">
+                  <button onClick={handleSaveEndpoint} disabled={!endpointDirty}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      endpointDirty
+                        ? "bg-[var(--accent-muted)] text-[var(--accent)] cursor-pointer hover:brightness-110"
+                        : "bg-white/5 text-[var(--text-muted)] cursor-not-allowed opacity-60"
+                    }`}>
+                    <Save size={12} /> Save
+                  </button>
+                  {endpointSaved && (
+                    <span className="flex items-center gap-1 text-xs text-[var(--success)]">
+                      <Check size={12} /> Saved
+                    </span>
+                  )}
+                  {endpointDirty && !endpointSaved && (
+                    <span className="text-xs text-[var(--text-muted)]">Unsaved changes</span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <NeuInput label="API Key" type="password" value={apiKeyDraft}
+                  onChange={(e) => setApiKeyDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && apiKeyDirty) handleSaveApiKey(); }}
+                  placeholder="lm-studio" />
+                <div className="flex items-center gap-2 mt-2">
+                  <button onClick={handleSaveApiKey} disabled={!apiKeyDirty}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      apiKeyDirty
+                        ? "bg-[var(--accent-muted)] text-[var(--accent)] cursor-pointer hover:brightness-110"
+                        : "bg-white/5 text-[var(--text-muted)] cursor-not-allowed opacity-60"
+                    }`}>
+                    <Save size={12} /> Save
+                  </button>
+                  {apiKeySaved && (
+                    <span className="flex items-center gap-1 text-xs text-[var(--success)]">
+                      <Check size={12} /> Saved
+                    </span>
+                  )}
+                  {apiKeyDirty && !apiKeySaved && (
+                    <span className="text-xs text-[var(--text-muted)]">Unsaved changes</span>
+                  )}
+                </div>
+              </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
@@ -96,7 +172,7 @@ export default function SettingsPanel() {
                 </div>
                 {models.length > 0 ? (
                   <select value={settings.llm.model} onChange={(e) => updateLLM({ model: e.target.value })}
-                    className="w-full rounded-xl px-3 py-2.5 text-sm bg-[#1a1a1a] text-[var(--text-primary)] border border-white/5 outline-none cursor-pointer shadow-[inset_3px_3px_6px_#111,inset_-3px_-3px_6px_#2a2a2a]">
+                    className="w-full rounded-xl px-3 py-2.5 text-sm bg-[var(--background)] text-[var(--text-primary)] border border-[var(--border)] outline-none cursor-pointer shadow-[inset_2px_2px_6px_rgba(0,0,0,0.35),inset_-2px_-2px_6px_rgba(255,255,255,0.025)]">
                     <option value="default">Default</option>
                     {models.map((m) => <option key={m} value={m}>{m}</option>)}
                   </select>
@@ -169,7 +245,7 @@ export default function SettingsPanel() {
                 {THEMES.map((t) => (
                   <button key={t.key} onClick={() => setTheme(t.key)}
                     className={`flex items-center gap-3 p-3.5 rounded-xl transition-all cursor-pointer ${
-                      settings.theme === t.key ? "bg-white/10 border-2 border-white/10" : "bg-[#1a1a1a] border-2 border-transparent hover:bg-white/5"
+                      settings.theme === t.key ? "bg-white/10 border-2 border-white/10" : "bg-[var(--surface)] border-2 border-transparent hover:bg-white/5"
                     }`}>
                     <div className="w-5 h-5 rounded-full shrink-0" style={{ backgroundColor: t.color, boxShadow: `0 0 12px ${t.color}50` }} />
                     <span className="text-sm font-medium" style={{ color: settings.theme === t.key ? t.color : "var(--text-secondary)" }}>

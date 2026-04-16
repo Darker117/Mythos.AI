@@ -20,6 +20,7 @@ import { useSettingsStore } from "../store/settingsStore";
 import { useGameStore } from "../store/gameStore";
 import { NeuInput, NeuTextarea, NeuButton, NeuCard } from "./neumorphic/Primitives";
 import { generateRandomScenario } from "../engine/scenarioGenerator";
+import { TEMPLATE_PRESETS } from "../data/presets";
 import { Loader2 } from "lucide-react";
 
 function generateId(): string {
@@ -105,6 +106,26 @@ export default function ScenarioCreator() {
 
     if (id === "empty") {
       setGenre("Custom");
+      setStep("editor");
+      return;
+    }
+
+    // Load preset data for this template
+    const preset = TEMPLATE_PRESETS[id];
+    if (preset) {
+      setName(preset.name);
+      setDescription(preset.description);
+      setGenre(preset.genre);
+      setSetting(preset.setting);
+      setTags(preset.tags.join(", "));
+      setPlot(preset.plot);
+      setCards(
+        preset.storyCards.map((c) => ({
+          ...c,
+          id: generateId(),
+          enabled: true,
+        })),
+      );
     } else {
       setGenre(id.charAt(0).toUpperCase() + id.slice(1));
     }
@@ -386,7 +407,7 @@ export default function ScenarioCreator() {
                                 onChange={(e) =>
                                   updateCard(card.id, { type: e.target.value as StoryCard["type"] })
                                 }
-                                className="text-xs rounded-lg px-2 py-1 bg-[#1a1a1a] text-[var(--text-secondary)] border border-white/5 outline-none cursor-pointer"
+                                className="text-xs rounded-lg px-2 py-1 bg-[var(--background)] text-[var(--text-secondary)] border border-[var(--border)] outline-none cursor-pointer"
                               >
                                 <option value="character">Character</option>
                                 <option value="location">Location</option>

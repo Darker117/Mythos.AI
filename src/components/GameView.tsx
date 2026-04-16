@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { ArrowLeft, PanelRightOpen } from "lucide-react";
 import { useAdventureStore } from "../store/adventureStore";
 import { useSettingsStore } from "../store/settingsStore";
@@ -12,12 +12,16 @@ import {
   generateCompletion,
   generateCompletionStream,
 } from "../engine/llmClient";
+import { detectAndGenerateCards } from "../engine/cardGenerator";
+import { extractWorldState } from "../engine/worldStateTracker";
+import { extractEvents } from "../engine/eventLog";
+import { maybeSummarize } from "../engine/summarizer";
 import StoryFeed from "./StoryFeed";
 import InputBar from "./InputBar";
 import SettingsSidebar from "./adventure/SettingsSidebar";
 
 export default function GameView() {
-  const { getActiveAdventure, addMessage, undoLastExchange } =
+  const { getActiveAdventure, addMessage, undoLastExchange, addStoryCard, updateStoryCard, updateAdventure, updatePlot } =
     useAdventureStore();
   const { settings } = useSettingsStore();
   const {
@@ -34,12 +38,108 @@ export default function GameView() {
 
   const adventure = getActiveAdventure();
 
+  // Guard against React StrictMode double-mount + stale closure re-fires.
+  const openingFiredRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (adventure && adventure.history.length === 0 && !isGenerating) {
+    if (
+      adventure &&
+      adventure.history.length === 0 &&
+      !isGenerating &&
+      openingFiredRef.current !== adventure.id
+    ) {
+      openingFiredRef.current = adventure.id;
       generateOpening();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adventure?.id]);
+
+  /**
+   * Post-response analysis pipeline. Runs sequentially after the main
+   * narrative stream completes. Each step is independently try-caught —
+   * a failure in one never blocks the rest. The spinner stays visible
+   * during this phase.
+   *
+   * Sequential execution is critical: local LLMs (LM Studio) are
+   * single-threaded, so concurrent requests corrupt each other.
+   */
+  const postResponsePipeline = useCallback(
+    async (responseText: string) => {
+      if (!adventure) return;
+
+      // 1. Generate/update story cards.
+      try {
+        const cardResult = await detectAndGenerateCards(
+          responseText,
+          adventure.storyCards,
+          settings.llm,
+        );
+        for (const card of cardResult.newCards) {
+          addStoryCard(adventure.id, card);
+        }
+        for (const upd of cardResult.updatedCards) {
+          updateStoryCard(adventure.id, upd.id, {
+            content: upd.content,
+            trigger: upd.trigger,
+          });
+        }
+      } catch {
+        // Card generation is non-critical.
+      }
+
+      // 2. Extract world state.
+      try {
+        const newWorldState = await extractWorldState(
+          responseText,
+          adventure.worldState,
+          settings.llm,
+        );
+        updateAdventure(adventure.id, { worldState: newWorldState });
+      } catch {
+        // World state extraction is non-critical.
+      }
+
+      // 3. Extract key events (if memoryBank enabled).
+      if (settings.memoryBank) {
+        try {
+          const newEvents = await extractEvents(
+            responseText,
+            adventure.history.length,
+            settings.llm,
+          );
+          if (newEvents.length > 0) {
+            updateAdventure(adventure.id, {
+              events: [...adventure.events, ...newEvents],
+            });
+          }
+        } catch {
+          // Event extraction is non-critical.
+        }
+      }
+
+      // 4. Auto-summarize (if enabled and threshold met).
+      if (settings.autoSummarize) {
+        try {
+          // Re-read adventure to get the latest history length after addMessage.
+          const freshAdventure = useAdventureStore.getState().adventures.find(
+            (a) => a.id === adventure.id,
+          );
+          if (freshAdventure) {
+            const result = await maybeSummarize(freshAdventure, settings.llm);
+            if (result) {
+              updatePlot(adventure.id, { storySummary: result.summary });
+              updateAdventure(adventure.id, {
+                summarizedUpTo: result.newSummarizedUpTo,
+              });
+            }
+          }
+        } catch {
+          // Summarization is non-critical.
+        }
+      }
+    },
+    [adventure, settings, addStoryCard, updateStoryCard, updateAdventure, updatePlot],
+  );
 
   const generateOpening = useCallback(async () => {
     if (!adventure) return;
@@ -49,24 +149,26 @@ export default function GameView() {
 
     try {
       const messages = buildInitialMessages(adventure);
+      let fullText = "";
       if (settings.streamResponses) {
-        let fullText = "";
         for await (const chunk of generateCompletionStream(messages, settings.llm)) {
           fullText += chunk;
           appendStreamingText(chunk);
         }
-        addMessage(adventure.id, createChatMessage("assistant", fullText));
       } else {
-        const response = await generateCompletion(messages, settings.llm);
-        addMessage(adventure.id, createChatMessage("assistant", response));
+        fullText = await generateCompletion(messages, settings.llm);
       }
+      addMessage(adventure.id, createChatMessage("assistant", fullText));
+
+      // Run the full post-response pipeline.
+      await postResponsePipeline(fullText);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to connect to LLM");
     } finally {
       setGenerating(false);
       setStreamingText("");
     }
-  }, [adventure, settings, addMessage, setGenerating, setStreamingText, appendStreamingText, setError]);
+  }, [adventure, settings, addMessage, setGenerating, setStreamingText, appendStreamingText, setError, postResponsePipeline]);
 
   const handleSubmit = useCallback(
     async (text: string, mode: InputMode) => {
@@ -78,17 +180,19 @@ export default function GameView() {
 
       try {
         const messages = buildMessages(adventure, text, mode, settings);
+        let fullText = "";
         if (settings.streamResponses) {
-          let fullText = "";
           for await (const chunk of generateCompletionStream(messages, settings.llm)) {
             fullText += chunk;
             appendStreamingText(chunk);
           }
-          addMessage(adventure.id, createChatMessage("assistant", fullText));
         } else {
-          const response = await generateCompletion(messages, settings.llm);
-          addMessage(adventure.id, createChatMessage("assistant", response));
+          fullText = await generateCompletion(messages, settings.llm);
         }
+        addMessage(adventure.id, createChatMessage("assistant", fullText));
+
+        // Run the full post-response pipeline.
+        await postResponsePipeline(fullText);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to connect to LLM");
       } finally {
@@ -96,7 +200,7 @@ export default function GameView() {
         setStreamingText("");
       }
     },
-    [adventure, isGenerating, settings, addMessage, setGenerating, setStreamingText, appendStreamingText, setError],
+    [adventure, isGenerating, settings, addMessage, setGenerating, setStreamingText, appendStreamingText, setError, postResponsePipeline],
   );
 
   function handleUndo() {
@@ -116,7 +220,7 @@ export default function GameView() {
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-[#1a1a1a]/60 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-[var(--glass-bg)] backdrop-blur-[var(--glass-blur)] shrink-0">
           <button onClick={() => setView("dashboard")} className="p-2 rounded-lg hover:bg-white/5 text-[var(--text-muted)] cursor-pointer transition-colors">
             <ArrowLeft size={18} />
           </button>

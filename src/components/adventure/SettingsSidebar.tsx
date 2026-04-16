@@ -14,6 +14,8 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronRight,
+  Check,
+  Save,
 } from "lucide-react";
 import type { Adventure, StoryCard, ThemeName, TextStyle } from "../../types";
 import { useAdventureStore } from "../../store/adventureStore";
@@ -31,7 +33,7 @@ interface Props {
 }
 
 const THEMES: { key: ThemeName; label: string; color: string }[] = [
-  { key: "dark", label: "Default", color: "#7c5cfc" },
+  { key: "dark", label: "Default", color: "#b46bff" },
   { key: "orcish", label: "Orcish", color: "#ef4444" },
   { key: "atlantis", label: "Atlantis", color: "#06b6d4" },
   { key: "smores", label: "S'mores", color: "#f59e0b" },
@@ -62,6 +64,21 @@ export default function SettingsSidebar({ adventure }: Props) {
 
   const [models, setModels] = useState<string[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
+  const [endpointDraft, setEndpointDraft] = useState(settings.llm.endpoint);
+  const [endpointSaved, setEndpointSaved] = useState(false);
+
+  // Keep the draft in sync if the saved endpoint changes elsewhere (e.g. from the main Settings page).
+  useEffect(() => {
+    setEndpointDraft(settings.llm.endpoint);
+  }, [settings.llm.endpoint]);
+
+  const endpointDirty = endpointDraft !== settings.llm.endpoint;
+
+  function handleSaveEndpoint() {
+    updateLLM({ endpoint: endpointDraft });
+    setEndpointSaved(true);
+    setTimeout(() => setEndpointSaved(false), 2000);
+  }
 
   useEffect(() => {
     if (settingsPanelOpen && gameplaySubTab === "models") {
@@ -93,7 +110,7 @@ export default function SettingsSidebar({ adventure }: Props) {
   const plot = adventure.plot ?? { aiInstructions: "", plotEssentials: "", authorsNote: "", storySummary: "", openingType: "story" as const, openingContent: "" };
 
   return (
-    <div className="w-80 h-full border-l border-white/5 flex flex-col shrink-0 bg-[#1a1a1a]/90 backdrop-blur-md">
+    <div className="w-80 h-full border-l border-white/5 flex flex-col shrink-0 bg-[var(--glass-bg-strong)] backdrop-blur-[var(--glass-blur)]">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
         <div className="flex gap-1">
@@ -114,12 +131,12 @@ export default function SettingsSidebar({ adventure }: Props) {
             <Gamepad2 size={13} /> Gameplay
           </button>
         </div>
-        <button
+        <NeuButton
+          size="iconSm"
           onClick={() => setSettingsPanelOpen(false)}
-          className="p-1.5 rounded-lg hover:bg-white/5 text-[var(--text-muted)] cursor-pointer"
         >
           <X size={15} />
-        </button>
+        </NeuButton>
       </div>
 
       {/* Sub-tabs */}
@@ -227,12 +244,36 @@ export default function SettingsSidebar({ adventure }: Props) {
         {/* ── GAMEPLAY > MODELS ── */}
         {adventureTab === "gameplay" && gameplaySubTab === "models" && (
           <>
-            <NeuInput
-              label="Endpoint"
-              value={settings.llm.endpoint}
-              onChange={(e) => updateLLM({ endpoint: e.target.value })}
-              placeholder="http://localhost:1234/v1"
-            />
+            <div>
+              <NeuInput
+                label="Endpoint"
+                value={endpointDraft}
+                onChange={(e) => setEndpointDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && endpointDirty) handleSaveEndpoint(); }}
+                placeholder="http://localhost:1234/v1"
+              />
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  onClick={handleSaveEndpoint}
+                  disabled={!endpointDirty}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    endpointDirty
+                      ? "bg-[var(--accent-muted)] text-[var(--accent)] cursor-pointer hover:brightness-110"
+                      : "bg-white/5 text-[var(--text-muted)] cursor-not-allowed opacity-60"
+                  }`}
+                >
+                  <Save size={12} /> Save
+                </button>
+                {endpointSaved && (
+                  <span className="flex items-center gap-1 text-xs text-[var(--success)]">
+                    <Check size={12} /> Saved
+                  </span>
+                )}
+                {endpointDirty && !endpointSaved && (
+                  <span className="text-xs text-[var(--text-muted)]">Unsaved</span>
+                )}
+              </div>
+            </div>
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-medium text-[var(--text-muted)]">Model</label>
@@ -247,7 +288,7 @@ export default function SettingsSidebar({ adventure }: Props) {
                 <select
                   value={settings.llm.model}
                   onChange={(e) => updateLLM({ model: e.target.value })}
-                  className="w-full rounded-xl px-3 py-2 text-sm bg-[#1a1a1a] text-[var(--text-primary)] border border-white/5 outline-none cursor-pointer shadow-[inset_3px_3px_6px_#111,inset_-3px_-3px_6px_#2a2a2a]"
+                  className="w-full rounded-xl px-3 py-2 text-sm bg-[var(--background)] text-[var(--text-primary)] border border-[var(--border)] outline-none cursor-pointer shadow-[inset_2px_2px_6px_rgba(0,0,0,0.35),inset_-2px_-2px_6px_rgba(255,255,255,0.025)]"
                 >
                   <option value="default">Default</option>
                   {models.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -297,7 +338,7 @@ export default function SettingsSidebar({ adventure }: Props) {
                     key={t.key}
                     onClick={() => setTheme(t.key)}
                     className={`flex items-center gap-2 p-2.5 rounded-xl text-xs font-medium cursor-pointer transition-all ${
-                      settings.theme === t.key ? "bg-white/10 border border-white/10" : "bg-[#1a1a1a] border border-white/5 hover:bg-white/5"
+                      settings.theme === t.key ? "bg-white/10 border border-white/10" : "bg-[var(--surface)] border border-[var(--border)] hover:bg-white/5"
                     }`}
                     style={{ color: settings.theme === t.key ? t.color : "var(--text-secondary)" }}
                   >
@@ -359,7 +400,7 @@ function CardItem({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-xl p-3 bg-[#252525] border border-white/5" style={{ opacity: card.enabled ? 1 : 0.5 }}>
+    <div className="rounded-xl p-3 bg-[var(--surface)] border border-[var(--border)]" style={{ opacity: card.enabled ? 1 : 0.5 }}>
       <div className="flex items-center gap-2">
         <button onClick={() => setOpen(!open)} className="cursor-pointer text-[var(--text-muted)]">
           {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
