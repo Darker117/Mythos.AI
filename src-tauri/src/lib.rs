@@ -53,6 +53,16 @@ pub fn run() {
       ",
       kind: MigrationKind::Up,
     },
+    Migration {
+      version: 2,
+      description: "add world state, events, and summarization tracking",
+      sql: "
+        ALTER TABLE adventures ADD COLUMN world_state_json TEXT NOT NULL DEFAULT '{}';
+        ALTER TABLE adventures ADD COLUMN events_json TEXT NOT NULL DEFAULT '[]';
+        ALTER TABLE adventures ADD COLUMN summarized_up_to INTEGER NOT NULL DEFAULT 0;
+      ",
+      kind: MigrationKind::Up,
+    },
   ];
 
   tauri::Builder::default()

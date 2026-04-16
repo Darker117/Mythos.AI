@@ -28,6 +28,20 @@ export interface ChatMessage {
   inputMode?: "do" | "say" | "story" | "see";
 }
 
+export interface WorldState {
+  currentLocation: string;
+  activeNPCs: string[];
+  playerStatus: string;
+  recentDevelopment: string;
+}
+
+export interface StoryEvent {
+  id: string;
+  summary: string;
+  turn: number;
+  timestamp: number;
+}
+
 export interface Adventure {
   id: string;
   name: string;
@@ -40,6 +54,9 @@ export interface Adventure {
   storyCards: StoryCard[];
   history: ChatMessage[];
   tags: string[];
+  worldState: WorldState;
+  events: StoryEvent[];
+  summarizedUpTo: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -96,6 +113,13 @@ export const SCENARIO_TEMPLATES = [
   { id: "cyberpunk", label: "Cyberpunk", icon: "Cpu", color: "#06b6d4" },
   { id: "apocalyptic", label: "Apocalyptic", icon: "Flame", color: "#f97316" },
 ] as const;
+
+export const DEFAULT_WORLD_STATE: WorldState = {
+  currentLocation: "Unknown",
+  activeNPCs: [],
+  playerStatus: "Normal",
+  recentDevelopment: "",
+};
 
 export const DEFAULT_PLOT: PlotData = {
   aiInstructions: "",

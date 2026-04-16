@@ -1,16 +1,24 @@
 import type { StoryCard } from "../types";
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function findActiveCards(
   cards: StoryCard[],
   recentText: string,
 ): StoryCard[] {
-  const lowerText = recentText.toLowerCase();
   return cards.filter((card) => {
     if (!card.enabled) return false;
     const triggers = card.trigger
       .split(",")
-      .map((t) => t.trim().toLowerCase());
-    return triggers.some((trigger) => trigger && lowerText.includes(trigger));
+      .map((t) => t.trim())
+      .filter(Boolean);
+    return triggers.some((trigger) => {
+      // Word-boundary match prevents false positives like "arch" matching "marching".
+      const pattern = new RegExp(`\\b${escapeRegex(trigger)}\\b`, "i");
+      return pattern.test(recentText);
+    });
   });
 }
 

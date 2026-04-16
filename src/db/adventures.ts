@@ -1,5 +1,5 @@
-import type { Adventure, ChatMessage, StoryCard, PlotData } from "../types";
-import { DEFAULT_PLOT } from "../types";
+import type { Adventure, ChatMessage, StoryCard, PlotData, WorldState, StoryEvent } from "../types";
+import { DEFAULT_PLOT, DEFAULT_WORLD_STATE } from "../types";
 import { getDb, queueWrite } from "./index";
 
 interface AdventureRow {
@@ -12,6 +12,9 @@ interface AdventureRow {
   memory: string;
   plot_json: string;
   tags_json: string;
+  world_state_json: string;
+  events_json: string;
+  summarized_up_to: number;
   created_at: number;
   updated_at: number;
 }
@@ -62,6 +65,9 @@ function rowToAdventure(
     storyCards: cards,
     history: messages,
     tags: parseJSON<string[]>(row.tags_json, []),
+    worldState: { ...DEFAULT_WORLD_STATE, ...parseJSON<Partial<WorldState>>(row.world_state_json, {}) },
+    events: parseJSON<StoryEvent[]>(row.events_json, []),
+    summarizedUpTo: row.summarized_up_to ?? 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -119,8 +125,8 @@ export async function loadAllAdventures(): Promise<Adventure[]> {
 export function insertAdventure(adv: Adventure): void {
   queueWrite(async (db) => {
     await db.execute(
-      `INSERT INTO adventures (id, name, genre, description, setting, system_prompt, memory, plot_json, tags_json, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      `INSERT INTO adventures (id, name, genre, description, setting, system_prompt, memory, plot_json, tags_json, world_state_json, events_json, summarized_up_to, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
       [
         adv.id,
         adv.name,
@@ -131,6 +137,9 @@ export function insertAdventure(adv: Adventure): void {
         adv.memory,
         JSON.stringify(adv.plot),
         JSON.stringify(adv.tags),
+        JSON.stringify(adv.worldState),
+        JSON.stringify(adv.events),
+        adv.summarizedUpTo,
         adv.createdAt,
         adv.updatedAt,
       ],
@@ -169,8 +178,9 @@ export function updateAdventureRow(id: string, adv: Adventure): void {
       `UPDATE adventures SET
         name = $1, genre = $2, description = $3, setting = $4,
         system_prompt = $5, memory = $6, plot_json = $7, tags_json = $8,
-        updated_at = $9
-       WHERE id = $10`,
+        world_state_json = $9, events_json = $10, summarized_up_to = $11,
+        updated_at = $12
+       WHERE id = $13`,
       [
         adv.name,
         adv.genre,
@@ -180,6 +190,9 @@ export function updateAdventureRow(id: string, adv: Adventure): void {
         adv.memory,
         JSON.stringify(adv.plot),
         JSON.stringify(adv.tags),
+        JSON.stringify(adv.worldState),
+        JSON.stringify(adv.events),
+        adv.summarizedUpTo,
         adv.updatedAt,
         id,
       ],

@@ -2,19 +2,30 @@ import { generateCompletion } from "./llmClient";
 import type { CompletionMessage } from "./llmClient";
 import type { StoryCard, LLMSettings } from "../types";
 
-// Shape the LLM is expected to return for each card candidate
 interface RawCardCandidate {
   type: StoryCard["type"];
   name: string;
   trigger: string;
   content: string;
+  /** If true, this is an update to an existing card rather than a new one. */
+  isUpdate?: boolean;
 }
 
-/**
- * Builds the system + user messages for the card-detection call.
- * Keeping the prompt construction separate makes it easy to test or tweak
- * without touching the async logic.
- */
+/** Result includes both newly created cards and updates to existing ones. */
+export interface CardGenerationResult {
+  newCards: StoryCard[];
+  updatedCards: { id: string; content: string; trigger: string }[];
+}
+
+/** Normalize a name for fuzzy comparison: lowercase, strip articles, trim. */
+function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\b(the|a|an)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function buildDetectionMessages(
   responseText: string,
   existingNames: string[],
@@ -25,31 +36,24 @@ function buildDetectionMessages(
       : "none";
 
   const systemPrompt = `You are a world-building assistant for an AI-driven story engine. \
-Your job is to read a narrative passage and identify any NEW, significant entities introduced \
-that deserve a story card entry. A story card captures persistent world-knowledge about a named \
-entity so it can be referenced consistently in future scenes.
+Your job is to read a narrative passage and identify significant entities that need story cards.
 
 Rules:
-- Only flag entities that appear SIGNIFICANT to the story (named characters, notable locations, \
+- Flag entities that are SIGNIFICANT to the story (named characters, notable locations, \
 important factions, meaningful items, or pivotal events). Ignore throwaway or generic mentions.
-- Do NOT create cards for entities that are already covered. The existing card names are: ${existingList}.
-- For each new entity produce exactly these fields:
-    type    – one of: character | location | item | lore | event | faction | class | race
-    name    – the entity's proper name as it appears in the text
-    trigger – 2–3 comma-separated keywords a reader might use to reference this entity
-    content – 2–3 sentences of world-info describing the entity
+- The existing card names are: ${existingList}.
+- If an existing entity has a MAJOR new revelation (betrayal, hidden identity, new ability, death), \
+include it with "isUpdate": true and the SAME name so the card can be updated. Only do this for \
+genuinely significant new information — not minor details.
+- For truly NEW entities, produce a fresh card with "isUpdate": false (or omit the field).
+- For each entity produce exactly these fields:
+    type      – one of: character | location | item | lore | event | faction | class | race
+    name      – the entity's proper name as it appears in the text
+    trigger   – 2–3 comma-separated keywords a reader might use to reference this entity
+    content   – 2–3 sentences of world-info describing the entity (or the update)
+    isUpdate  – boolean, true only if updating an existing card
 - Respond with ONLY a valid JSON array. No markdown fences, no prose, no extra keys.
-- If nothing new and significant was introduced, respond with an empty array: []
-
-Example output format:
-[
-  {
-    "type": "character",
-    "name": "Seraphina Voss",
-    "trigger": "Seraphina, Voss, the archivist",
-    "content": "Seraphina Voss is the head archivist of the Obsidian Vault. She speaks in clipped sentences and trusts no one who cannot prove their bloodline. She secretly harbours a stolen relic beneath her desk."
-  }
-]`;
+- If nothing new or significant was introduced, respond with: []`;
 
   const userPrompt = `Narrative passage to analyse:
 
@@ -57,7 +61,7 @@ Example output format:
 ${responseText.trim()}
 ---
 
-Identify any NEW significant entities not already in the existing card list and return the JSON array.`;
+Identify any NEW or significantly UPDATED entities and return the JSON array.`;
 
   return [
     { role: "system", content: systemPrompt },
@@ -65,10 +69,6 @@ Identify any NEW significant entities not already in the existing card list and 
   ];
 }
 
-/**
- * Strips an optional markdown code-fence wrapper that some models add despite
- * being told not to, so JSON.parse still succeeds.
- */
 function stripMarkdownFence(raw: string): string {
   return raw
     .trim()
@@ -77,23 +77,12 @@ function stripMarkdownFence(raw: string): string {
     .trim();
 }
 
-/**
- * Validates that a raw candidate has the minimum fields needed to build a
- * StoryCard. Returns false for anything that looks malformed.
- */
 function isValidCandidate(candidate: unknown): candidate is RawCardCandidate {
   if (!candidate || typeof candidate !== "object") return false;
   const c = candidate as Record<string, unknown>;
 
   const validTypes: StoryCard["type"][] = [
-    "character",
-    "location",
-    "item",
-    "lore",
-    "event",
-    "faction",
-    "class",
-    "race",
+    "character", "location", "item", "lore", "event", "faction", "class", "race",
   ];
 
   return (
@@ -108,84 +97,97 @@ function isValidCandidate(candidate: unknown): candidate is RawCardCandidate {
   );
 }
 
-/** Generates a simple unique id without external dependencies. */
 function generateId(): string {
   return `card_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
 /**
- * Analyses the latest AI narrative response and auto-generates StoryCards for
- * any NEW significant entities it introduces.
+ * Analyses the latest AI narrative response and auto-generates or updates
+ * StoryCards for significant entities.
  *
- * @param responseText  The raw narrative text returned by the storytelling LLM.
- * @param existingCards The cards already saved in the adventure, used to avoid
- *                      creating duplicates.
- * @param llmSettings   The user's LLM configuration. Temperature and maxTokens
- *                      are overridden to lower values suitable for a structured,
- *                      utility-style call.
- * @returns             An array of freshly minted StoryCards (may be empty).
- *                      Never throws — failures are caught and logged so they
- *                      cannot disrupt gameplay.
+ * Uses fuzzy name matching to prevent duplicates ("Sera" vs "Seraphina")
+ * and can return card updates when an existing entity gets a major revelation.
  */
 export async function detectAndGenerateCards(
   responseText: string,
   existingCards: StoryCard[],
   llmSettings: LLMSettings,
-): Promise<StoryCard[]> {
+): Promise<CardGenerationResult> {
   try {
-    // Build a deduplicated list of existing names to pass into the prompt
-    const existingNames = existingCards
-      .map((c) => c.name.trim())
-      .filter(Boolean);
-
+    const existingNames = existingCards.map((c) => c.name.trim()).filter(Boolean);
     const messages = buildDetectionMessages(responseText, existingNames);
 
-    // Use a lower temperature and token budget — this is structured extraction,
-    // not creative writing, so we want deterministic, concise output.
-    const detectionSettings: LLMSettings = {
+    const raw = await generateCompletion(messages, {
       ...llmSettings,
       temperature: 0.3,
       maxTokens: 1000,
-    };
-
-    const raw = await generateCompletion(messages, detectionSettings);
+    });
 
     if (!raw || raw.trim().length === 0) {
-      return [];
+      return { newCards: [], updatedCards: [] };
     }
 
     const cleaned = stripMarkdownFence(raw);
-
     let parsed: unknown;
     try {
       parsed = JSON.parse(cleaned);
     } catch {
-      console.warn("[cardGenerator] LLM returned non-JSON output:", cleaned);
-      return [];
+      return { newCards: [], updatedCards: [] };
     }
 
     if (!Array.isArray(parsed)) {
-      console.warn("[cardGenerator] Expected a JSON array, got:", typeof parsed);
-      return [];
+      return { newCards: [], updatedCards: [] };
     }
 
-    // Filter out any malformed entries, then map to full StoryCard objects
-    const newCards: StoryCard[] = parsed
-      .filter(isValidCandidate)
-      .map((candidate) => ({
-        id: generateId(),
-        type: candidate.type,
-        name: candidate.name.trim(),
-        trigger: candidate.trigger.trim(),
-        content: candidate.content.trim(),
-        notes: "",
-        enabled: true,
-      }));
+    const validCandidates = parsed.filter(isValidCandidate);
 
-    return newCards;
+    // Build a normalized-name → card map for fuzzy matching.
+    const normalizedMap = new Map<string, StoryCard>();
+    for (const card of existingCards) {
+      normalizedMap.set(normalizeName(card.name), card);
+    }
+
+    const newCards: StoryCard[] = [];
+    const updatedCards: { id: string; content: string; trigger: string }[] = [];
+
+    for (const candidate of validCandidates) {
+      const normalizedCandidateName = normalizeName(candidate.name);
+
+      // Check if this matches an existing card (exact or fuzzy).
+      const existingMatch =
+        normalizedMap.get(normalizedCandidateName) ??
+        // Also try matching against card triggers for alias coverage.
+        existingCards.find((c) =>
+          c.trigger
+            .split(",")
+            .some((t) => normalizeName(t) === normalizedCandidateName),
+        );
+
+      if (existingMatch && candidate.isUpdate) {
+        // Update existing card with new content.
+        updatedCards.push({
+          id: existingMatch.id,
+          content: `${existingMatch.content}\n\n[UPDATE]: ${candidate.content.trim()}`,
+          trigger: existingMatch.trigger, // keep existing triggers
+        });
+      } else if (!existingMatch) {
+        // Truly new card — no fuzzy match found.
+        newCards.push({
+          id: generateId(),
+          type: candidate.type,
+          name: candidate.name.trim(),
+          trigger: candidate.trigger.trim(),
+          content: candidate.content.trim(),
+          notes: "",
+          enabled: true,
+        });
+      }
+      // If existingMatch found but NOT isUpdate, skip — avoids creating duplicates.
+    }
+
+    return { newCards, updatedCards };
   } catch (error) {
-    // A failure here must never crash the game loop
-    console.error("[cardGenerator] Failed to detect/generate cards:", error);
-    return [];
+    console.error("[cardGenerator] Failed:", error);
+    return { newCards: [], updatedCards: [] };
   }
 }

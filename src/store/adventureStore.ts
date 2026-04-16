@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { Adventure, StoryCard, ChatMessage, PlotData } from "../types";
-import { DEFAULT_PLOT } from "../types";
+import { DEFAULT_PLOT, DEFAULT_WORLD_STATE } from "../types";
 import {
   loadAllAdventures,
   insertAdventure,
@@ -21,7 +21,7 @@ interface AdventureState {
 
   hydrate: () => Promise<void>;
 
-  createAdventure: (adventure: Omit<Adventure, "id" | "createdAt" | "updatedAt" | "history"> & { history?: ChatMessage[] }) => string;
+  createAdventure: (adventure: Omit<Adventure, "id" | "createdAt" | "updatedAt" | "history" | "worldState" | "events" | "summarizedUpTo"> & { history?: ChatMessage[]; worldState?: Adventure["worldState"]; events?: Adventure["events"]; summarizedUpTo?: number }) => string;
   deleteAdventure: (id: string) => void;
   duplicateAdventure: (id: string) => string | null;
   setActiveAdventure: (id: string | null) => void;
@@ -90,7 +90,7 @@ export const useAdventureStore = create<AdventureState>()((set, get) => ({
   createAdventure: (data) => {
     const id = generateId();
     const adventure: Adventure = {
-      ...{ description: "", tags: [], plot: { ...DEFAULT_PLOT } },
+      ...{ description: "", tags: [], plot: { ...DEFAULT_PLOT }, worldState: { ...DEFAULT_WORLD_STATE }, events: [], summarizedUpTo: 0 },
       ...data,
       id,
       history: data.history ?? [],
